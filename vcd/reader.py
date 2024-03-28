@@ -81,6 +81,12 @@ class VarDecl(NamedTuple):
     May select a single bit index, e.g. ``ref [ 3 ]``. Or a range of
     bits, e.g. from ``ref [ 7 : 3 ]`` (MSB index then LSB index)."""
 
+    word_index: Union[None, int, Tuple[int, int]]
+    """Optional range of bits to select from the variable.
+
+    May select a single bit index, e.g. ``ref [ 3 ]``. Or a range of
+    bits, e.g. from ``ref [ 7 : 3 ]`` (MSB index then LSB index)."""
+
     @property
     def ref_str(self) -> str:
         if self.bit_index is None:
@@ -391,6 +397,7 @@ class _TokenizerState:
             65 <= c <= 90  # 'A' <= c <= 'Z'
             or 97 <= c <= 122  # 'a' - 'z'
             or c == 95  # '_'
+            or c == 58  # ':' not in spec, but produced by JasperGold waveforms
         ):
             identifier = self.take_simple_identifier()
         elif c == 92:  # '\'
@@ -667,9 +674,15 @@ def _parse_token(s: _TokenizerState) -> Token:
                 bit_index = s.take_bit_index()
             else:
                 bit_index = None
-
+            c = s.skip_ws()
+            # added for unpacked 2-D arrays
+            if c == 91:  # '['
+                s.advance()
+                word_index = s.take_bit_index()
+            else:
+                word_index = None
             s.take_end()
-            var_decl = VarDecl(type_, size, id_code, ident, bit_index)
+            var_decl = VarDecl(type_, size, id_code, ident, bit_index, word_index)
             return Token(TokenKind.VAR, s.span(start), var_decl)
         elif kw == 'version':
             s.take_ws_after_kw(kw)

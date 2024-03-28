@@ -1,3 +1,4 @@
+*.vcd
 *.pyc
 *.pyo
 __pycache__
